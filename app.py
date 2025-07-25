@@ -107,12 +107,6 @@ def aggregate():
                     row.append(match[z].values[0] if not match.empty else 0)
                 matrix.append(row)
             return jsonify({'x_labels': x_labels, 'y_labels': y_labels, 'matrix': matrix})
-        elif chart_type == 'histogram':
-            if not y:
-                return jsonify({'error': 'Missing y'}), 400
-            counts, bin_edges = np.histogram(df[y].dropna(), bins=bins)
-            bin_labels = [f"{bin_edges[i]:.2f}-{bin_edges[i+1]:.2f}" for i in range(len(bin_edges)-1)]
-            return jsonify({'labels': bin_labels, 'values': counts.tolist()})
         elif chart_type in ['boxplot', 'violin']:
             if not x or not y:
                 return jsonify({'error': 'Missing x or y'}), 400
@@ -170,14 +164,6 @@ def aggregate():
             tasks = df[[x, start_col, end_col]].dropna()
             data_points = tasks.rename(columns={x: 'task', start_col: 'start', end_col: 'end'}).to_dict(orient='records')
             return jsonify({'tasks': data_points})
-        elif chart_type == 'waterfall':
-            if not x or not y:
-                return jsonify({'error': 'Missing x or y'}), 400
-            ordered = df[[x, y]].dropna().sort_values(x)
-            labels = ordered[x].astype(str).tolist()
-            values = ordered[y].tolist()
-            cumulative = np.cumsum(values).tolist()
-            return jsonify({'labels': labels, 'values': values, 'cumulative': cumulative})
         elif chart_type in ['treemap', 'sunburst']:
             if not hierarchy or not y:
                 return jsonify({'error': 'Missing hierarchy or y'}), 400
