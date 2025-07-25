@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel/CSV to Graph Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Chart.js plugins for advanced charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@4.1.0/dist/chartjs-chart-matrix.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@4.3.0/build/Chart.BoxPlot.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@4.3.0/build/Chart.ViolinPlot.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.3.0/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@4.1.0/dist/chartjs-chart-treemap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .file-upload {
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-input:hover {
+            border-color: #007bff;
+        }
+
+        .file-input input[type="file"] {
+            display: none;
+        }
+
+        .graph-selector {
+            margin: 20px 0;
+        }
+
+        .graph-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .graph-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .graph-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .graph-option input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #007bff;
+            color: #007bff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .graphs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .graph-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .graph-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .graph-config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            background: #fff;
+        }
+        .graph-config-table th, .graph-config-table td {
+            border: 1px solid #eee;
+            padding: 8px 6px;
+            text-align: left;
+        }
+        .graph-config-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .config-dropdown {
+            width: 100%;
+            padding: 6px 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        @media (max-width: 600px) {
+            .graph-config-table th, .graph-config-table td {
+                font-size: 12px;
+                padding: 6px 2px;
+            }
+            .config-dropdown {
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 768px) {
+            .graphs-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .graph-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"></path>
+                        <path d="M8 7v8M12 7v8"></path>
+                    </svg>
+                    Excel/CSV to Graph Generator
+                </h1>
+            </div>
+            <div class="card-content">
+                <div class="file-upload">
+                    <label class="file-input">
+                        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(event)">
+                        <span id="fileLabel">Click to upload file</span>
+                    </label>
+                    <div style="color:#888;font-size:13px;margin-top:5px;">Note: For best performance, use files under 20MB. Large files may cause browser slowdowns or fail to load.</div>
+                </div>
+
+                <div id="graphSelector" class="graph-selector" style="display: none;">
+                    <h3>Configure Graphs</h3>
+                    <div id="graphConfigTable"></div>
+                    <div class="buttons">
+                        <button class="btn btn-primary" onclick="addGraphConfig()">
+                            + Add Graph
+                        </button>
+                        <button class="btn btn-secondary" onclick="autoGenerateAll()">
+                            Auto-Generate All
+                        </button>
+                        <button class="btn btn-outline" onclick="generatePDF()" id="pdfBtn" style="display: none;">
+                            Export PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="graphsContainer" class="graphs-grid"></div>
+        <div id="loadingDiv" class="loading" style="display: none;"></div>
+    </div>
+
+    <script>
+        let columns = [];
+        let numericColumns = [];
+        let graphTypes = [
+            { value: 'bar', label: 'Bar' },
+            { value: 'line', label: 'Line' },
+            { value: 'pie', label: 'Pie' },
+            { value: 'donut', label: 'Donut' },
+            { value: 'scatter', label: 'Scatter' },
+            { value: 'area', label: 'Area' },
+            { value: 'heatmap', label: 'Heatmap' },
+            { value: 'histogram', label: 'Histogram' },
+            { value: 'boxplot', label: 'Box Plot' },
+            { value: 'violin', label: 'Violin Plot' },
+            { value: 'bubble', label: 'Bubble Chart' },
+            { value: 'radar', label: 'Radar/Spider Chart' },
+            { value: 'stacked_bar', label: 'Stacked Bar' },
+            { value: 'stacked_area', label: 'Stacked Area' },
+            { value: 'gantt', label: 'Gantt Chart' },
+            { value: 'waterfall', label: 'Waterfall Chart' },
+            { value: 'treemap', label: 'Treemap' },
+            { value: 'sunburst', label: 'Sunburst' }
+        ];
+        let graphConfigs = [];
+        let charts = [];
+        let uploadedFilename = null;
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('fileLabel').textContent = `Uploading ${file.name}...`;
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                setLoading(false);
+                if (res.error) {
+                    document.getElementById('fileLabel').textContent = `Error: ${res.error}`;
+                    columns = [];
+                    numericColumns = [];
+                    uploadedFilename = null;
+                    showGraphConfigTable();
+                    return;
+                }
+                columns = res.columns;
+                numericColumns = res.numeric_columns;
+                uploadedFilename = res.filename;
+                showGraphConfigTable();
+                document.getElementById('fileLabel').textContent = `Loaded: ${file.name}`;
+            })
+            .catch(err => {
+                setLoading(false);
+                document.getElementById('fileLabel').textContent = `Error uploading file.`;
+            });
+        }
+
+        function showGraphConfigTable() {
+            const graphSelector = document.getElementById('graphSelector');
+            const graphConfigTable = document.getElementById('graphConfigTable');
+            graphSelector.style.display = 'block';
+            if (columns.length === 0 || numericColumns.length === 0) {
+                graphConfigs = [];
+            } else {
+                graphConfigs = [{ x: columns[0], y: numericColumns[0] || columns[0], type: 'bar' }];
+            }
+            renderGraphConfigTable();
+        }
+
+        function renderGraphConfigTable() {
+            const graphConfigTable = document.getElementById('graphConfigTable');
+            if (numericColumns.length === 0) {
+                graphConfigTable.innerHTML = '<p>No numeric columns found for graphing.</p>';
+                return;
+            }
+            let html = `<div style="overflow-x:auto;"><table class="graph-config-table">
+                <thead>
+                  <tr>
+                    <th style='min-width:120px;'>X Axis</th>
+                    <th style='min-width:120px;'>Y Axis</th>
+                    <th style='min-width:120px;'>Graph Type</th>
+                    <th style='min-width:120px;'>Extra</th>
+                    <th style='min-width:80px;'>Action</th>
+                  </tr>
+                </thead>
+                <tbody>`;
+            graphConfigs.forEach((cfg, idx) => {
+                // Extra fields for special chart types
+                let extraFields = '';
+                const type = cfg.type;
+                if (type === 'heatmap') {
+                    extraFields += `<label>Z: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "z", this.value)'>${numericColumns.map(col => `<option value="${col}"${cfg.z===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                } else if (type === 'bubble') {
+                    extraFields += `<label>Size: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "size", this.value)'>${numericColumns.map(col => `<option value="${col}"${cfg.size===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                } else if (type === 'stacked_bar' || type === 'stacked_area') {
+                    extraFields += `<label>Stack: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "stack_col", this.value)'>${columns.map(col => `<option value="${col}"${cfg.stack_col===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                } else if (type === 'gantt') {
+                    extraFields += `<label>Start: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "start", this.value)'>${columns.map(col => `<option value="${col}"${cfg.start===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                    extraFields += `<label> End: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "end", this.value)'>${columns.map(col => `<option value="${col}"${cfg.end===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                } else if (type === 'treemap' || type === 'sunburst') {
+                    extraFields += `<label>Hierarchy: <select class='config-dropdown' multiple size='2' onchange='updateHierarchy(${idx}, this)'>${columns.map(col => `<option value="${col}"${cfg.hierarchy && cfg.hierarchy.includes(col)?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                    extraFields += `<label> Value: <select class='config-dropdown' onchange='updateGraphConfig(${idx}, "y", this.value)'>${numericColumns.map(col => `<option value="${col}"${cfg.y===col?' selected':''}>${col}</option>`).join('')}</select></label>`;
+                } else if (type === 'histogram') {
+                    extraFields += `<label>Bins: <input type='number' min='2' max='100' value='${cfg.bins||10}' style='width:50px;' onchange='updateGraphConfig(${idx}, "bins", this.value)'></label>`;
+                }
+                html += `<tr>
+                    <td><select class="config-dropdown" onchange="updateGraphConfig(${idx}, 'x', this.value)">
+                        ${columns.map(col => `<option value="${col}"${cfg.x===col?' selected':''}>${col}</option>`).join('')}
+                    </select></td>
+                    <td><select class="config-dropdown" onchange="updateGraphConfig(${idx}, 'y', this.value)">
+                        ${numericColumns.map(col => `<option value="${col}"${cfg.y===col?' selected':''}>${col}</option>`).join('')}
+                    </select></td>
+                    <td><select class="config-dropdown" onchange="updateGraphConfig(${idx}, 'type', this.value)">
+                        ${graphTypes.map(gt => `<option value="${gt.value}"${cfg.type===gt.value?' selected':''}>${gt.label}</option>`).join('')}
+                    </select></td>
+                    <td>${extraFields}</td>
+                    <td><button class="btn btn-outline" style="padding:6px 12px;" onclick="removeGraphConfig(${idx})">Remove</button></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div><button class="btn btn-primary" style="margin-top:10px;" onclick="generateSelectedGraphs()">Generate Selected</button>`;
+            graphConfigTable.innerHTML = html;
+        }
+
+        // For multi-select hierarchy (treemap/sunburst)
+        function updateHierarchy(idx, selectElem) {
+            const selected = Array.from(selectElem.selectedOptions).map(opt => opt.value);
+            graphConfigs[idx].hierarchy = selected;
+        }
+
+        function addGraphConfig() {
+            graphConfigs.push({ x: columns[0], y: numericColumns[0] || columns[0], type: 'bar' });
+            renderGraphConfigTable();
+        }
+        function removeGraphConfig(idx) {
+            graphConfigs.splice(idx, 1);
+            renderGraphConfigTable();
+        }
+        function updateGraphConfig(idx, key, value) {
+            graphConfigs[idx][key] = value;
+        }
+
+        function generateSelectedGraphs() {
+            if (graphConfigs.length === 0) {
+                alert('Please add at least one graph configuration');
+                return;
+            }
+            generateGraphs(graphConfigs);
+        }
+
+        // When auto-generate is clicked, hide config table and show only graphs, add a button to return to manual config
+        function autoGenerateAll() {
+            graphConfigs = [];
+            columns.forEach(xCol => {
+                numericColumns.forEach(yCol => {
+                    graphTypes.forEach(gt => {
+                        // Pie only makes sense with categorical x and numeric y
+                        if (gt.value === 'pie' && numericColumns.includes(xCol)) return;
+                        // Scatter: both axes should be numeric
+                        if (gt.value === 'scatter' && (!numericColumns.includes(xCol) || !numericColumns.includes(yCol))) return;
+                        // Area: like line, only numeric y
+                        if (gt.value === 'area' && !numericColumns.includes(yCol)) return;
+                        // Add more rules for new types if needed
+                        graphConfigs.push({ x: xCol, y: yCol, type: gt.value });
+                    });
+                });
+            });
+            window.autoGenMode = true;
+            document.getElementById('graphConfigTable').style.display = 'none';
+            // Add a button to return to manual config
+            let backBtn = document.getElementById('backToConfigBtn');
+            if (!backBtn) {
+                backBtn = document.createElement('button');
+                backBtn.id = 'backToConfigBtn';
+                backBtn.className = 'btn btn-secondary';
+                backBtn.style.marginBottom = '10px';
+                backBtn.innerText = 'Back to Manual Configuration';
+                backBtn.onclick = function() {
+                    window.autoGenMode = false;
+                    document.getElementById('graphConfigTable').style.display = '';
+                    document.getElementById('graphsContainer').innerHTML = '';
+                    let failedDiv = document.getElementById('failedGraphsDiv');
+                    if (failedDiv) failedDiv.innerHTML = '';
+                    backBtn.style.display = 'none';
+                };
+                document.getElementById('graphsContainer').parentElement.insertBefore(backBtn, document.getElementById('graphsContainer'));
+            } else {
+                backBtn.style.display = '';
+            }
+            generateSelectedGraphs();
+        }
+
+        function generateGraphs(configs) {
+            const container = document.getElementById('graphsContainer');
+            container.innerHTML = '';
+            charts = [];
+            setLoading(true);
+            let failedGraphs = [];
+            // If auto-generate, hide config table
+            if (window.autoGenMode) {
+                document.getElementById('graphConfigTable').style.display = 'none';
+            }
+            let requests = configs.map((cfg, idx) => {
+                const type = cfg.type;
+                let title = graphTypes.find(g => g.value === type)?.label || type;
+                if (type === 'pie' || type === 'donut') title += `: ${cfg.y} by ${cfg.x}`;
+                else if (type === 'bar' || type === 'line' || type === 'area' || type === 'histogram') title += `: ${cfg.y} vs ${cfg.x}`;
+                else if (type === 'heatmap') title += `: ${cfg.z} by ${cfg.x} and ${cfg.y}`;
+                else if (type === 'bubble') title += `: ${cfg.x}, ${cfg.y}, size=${cfg.size}`;
+                else if (type === 'boxplot' || type === 'violin') title += `: ${cfg.y} by ${cfg.x}`;
+                else if (type === 'radar') title += `: ${cfg.y} by ${cfg.x}`;
+                else if (type === 'stacked_bar' || type === 'stacked_area') title += `: ${cfg.y} by ${cfg.x} (stacked by ${cfg.stack_col})`;
+                else if (type === 'gantt') title += `: ${cfg.x} (${cfg.start} - ${cfg.end})`;
+                else if (type === 'waterfall') title += `: ${cfg.y} by ${cfg.x}`;
+                else if (type === 'treemap' || type === 'sunburst') title += `: ${cfg.y} by ${cfg.hierarchy?.join(' > ')}`;
+                // Prepare request body
+                let reqBody = { filename: uploadedFilename, type };
+                if (type === 'heatmap') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y; reqBody.z = cfg.z;
+                } else if (type === 'bubble') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y; reqBody.size = cfg.size;
+                } else if (type === 'stacked_bar' || type === 'stacked_area') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y; reqBody.stack_col = cfg.stack_col;
+                } else if (type === 'gantt') {
+                    reqBody.x = cfg.x; reqBody.start = cfg.start; reqBody.end = cfg.end;
+                } else if (type === 'treemap' || type === 'sunburst') {
+                    reqBody.hierarchy = cfg.hierarchy; reqBody.y = cfg.y;
+                } else if (type === 'histogram') {
+                    reqBody.y = cfg.y; reqBody.bins = cfg.bins || 10;
+                } else if (type === 'boxplot' || type === 'violin') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y;
+                } else if (type === 'waterfall') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y;
+                } else if (type === 'radar') {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y;
+                } else {
+                    reqBody.x = cfg.x; reqBody.y = cfg.y;
+                }
+                return fetch('/aggregate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reqBody)
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.error) {
+                        // Do not append a card for failed graphs
+                        failedGraphs.push({title, error: res.error});
+                        return;
+                    }
+                    // Only append card for successful graphs
+                    const graphCard = document.createElement('div');
+                    graphCard.className = 'graph-card';
+                    graphCard.innerHTML = `
+                        <div class="graph-title">${title}</div>
+                        <div class="chart-container">
+                            <canvas id="chart-${idx}"></canvas>
+                        </div>
+                    `;
+                    container.appendChild(graphCard);
+                    setTimeout(() => createChart(`chart-${idx}`, cfg, title, res), 100);
+                })
+                .catch((err) => {
+                    failedGraphs.push({title, error: 'Error loading data'});
+                });
+            });
+            Promise.all(requests).then(() => {
+                setLoading(false);
+                document.getElementById('pdfBtn').style.display = 'inline-flex';
+                // Show failed graph list if any, as plain text, at the end
+                let failedDiv = document.getElementById('failedGraphsDiv');
+                if (!failedDiv) {
+                    failedDiv = document.createElement('div');
+                    failedDiv.id = 'failedGraphsDiv';
+                    container.parentElement.appendChild(failedDiv);
+                }
+                if (failedGraphs.length > 0) {
+                    let msg = 'Could not generate the following graphs:\n';
+                    msg += failedGraphs.map(f => `- ${f.title}: ${f.error}`).join('\n');
+                    failedDiv.innerHTML = `<pre style='color:red;margin-top:10px;'>${msg}</pre>`;
+                } else {
+                    failedDiv.innerHTML = '';
+                }
+            });
+        }
+
+        function createChart(canvasId, cfg, title, backendData) {
+            const type = cfg.type;
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            let chartConfig;
+            // Pie/Donut/Bar/Line/Area/Histogram
+            if (["pie","donut","bar","line","area","histogram"].includes(type)) {
+                const labels = backendData.labels;
+                const values = backendData.values;
+                chartConfig = {
+                    type: type === 'area' ? 'line' : (type === 'donut' ? 'pie' : type),
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: cfg.y,
+                            data: values,
+                            backgroundColor: type === 'area' ? 'rgba(59, 130, 246, 0.4)' : [
+                                'rgba(59, 130, 246, 0.8)','rgba(239, 68, 68, 0.8)','rgba(16, 185, 129, 0.8)','rgba(245, 158, 11, 0.8)','rgba(139, 92, 246, 0.8)','rgba(236, 72, 153, 0.8)'],
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 2,
+                            fill: type === 'area',
+                            tension: type === 'line' || type === 'area' ? 0.1 : 0,
+                            cutout: type === 'donut' ? '60%' : undefined
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true } },
+                        scales: type !== 'pie' && type !== 'donut' ? {
+                            y: { beginAtZero: true, title: { display: true, text: cfg.y } },
+                            x: { title: { display: true, text: cfg.x } }
+                        } : {}
+                    }
+                };
+            } else if (type === 'scatter') {
+                chartConfig = {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: `${cfg.y} vs ${cfg.x}`,
+                            data: backendData.points,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { type: 'linear', position: 'bottom', title: { display: true, text: cfg.x } },
+                            y: { beginAtZero: true, title: { display: true, text: cfg.y } }
+                        }
+                    }
+                };
+            } else if (type === 'heatmap') {
+                chartConfig = {
+                    type: 'matrix',
+                    data: {
+                        datasets: [{
+                            label: cfg.z,
+                            data: backendData.matrix.flatMap((row, i) => row.map((v, j) => ({ x: backendData.x_labels[j], y: backendData.y_labels[i], v }))),
+                            backgroundColor: ctx => {
+                                const value = ctx.raw.v;
+                                return `rgba(59,130,246,${0.2 + 0.8 * (value/Math.max(...backendData.matrix.flat()))})`;
+                            },
+                            width: ({chart}) => (chart.chartArea||{}).width / backendData.x_labels.length - 2,
+                            height: ({chart}) => (chart.chartArea||{}).height / backendData.y_labels.length - 2
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { type: 'category', labels: backendData.x_labels, title: { display: true, text: cfg.x } },
+                            y: { type: 'category', labels: backendData.y_labels, title: { display: true, text: cfg.y } }
+                        }
+                    }
+                };
+            } else if (type === 'boxplot') {
+                chartConfig = {
+                    type: 'boxplot',
+                    data: {
+                        labels: backendData.stats.map(s => s.label),
+                        datasets: [{
+                            label: cfg.y,
+                            data: backendData.stats.map(s => ({ min: s.min, q1: s.q1, median: s.median, q3: s.q3, max: s.max, outliers: s.outliers })),
+                            backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            } else if (type === 'violin') {
+                chartConfig = {
+                    type: 'violin',
+                    data: {
+                        labels: backendData.stats.map(s => s.label),
+                        datasets: [{
+                            label: cfg.y,
+                            data: backendData.stats.map(s => s.values),
+                            backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            } else if (type === 'bubble') {
+                chartConfig = {
+                    type: 'bubble',
+                    data: {
+                        datasets: [{
+                            label: `${cfg.y} vs ${cfg.x}`,
+                            data: backendData.points.map(p => ({ x: p[cfg.x], y: p[cfg.y], r: Math.sqrt(p.size) })),
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { type: 'linear', position: 'bottom', title: { display: true, text: cfg.x } },
+                            y: { beginAtZero: true, title: { display: true, text: cfg.y } }
+                        }
+                    }
+                };
+            } else if (type === 'radar') {
+                chartConfig = {
+                    type: 'radar',
+                    data: {
+                        labels: backendData.labels,
+                        datasets: [{
+                            label: cfg.y,
+                            data: backendData.values,
+                            backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            } else if (type === 'stacked_bar' || type === 'stacked_area') {
+                chartConfig = {
+                    type: type === 'stacked_area' ? 'line' : 'bar',
+                    data: {
+                        labels: backendData.x_labels,
+                        datasets: backendData.stack_labels.map((label, i) => ({
+                            label,
+                            data: backendData.data[label],
+                            backgroundColor: `rgba(${59+20*i},${130+10*i},246,0.7)`,
+                            borderColor: `rgba(${59+20*i},${130+10*i},246,1)`,
+                            fill: type === 'stacked_area',
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true } },
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true, beginAtZero: true }
+                        }
+                    }
+                };
+            } else if (type === 'gantt') {
+                // Gantt: render as horizontal bar chart
+                chartConfig = {
+                    type: 'bar',
+                    data: {
+                        labels: backendData.tasks.map(t => t.task),
+                        datasets: [{
+                            label: 'Duration',
+                            data: backendData.tasks.map(t => [new Date(t.start), new Date(t.end)]),
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { type: 'time', time: { unit: 'day' }, title: { display: true, text: 'Time' } },
+                            y: { title: { display: true, text: 'Task' } }
+                        }
+                    }
+                };
+            } else if (type === 'waterfall') {
+                // Use chartjs-chart-financial plugin
+                chartConfig = {
+                    type: 'waterfall',
+                    data: {
+                        labels: backendData.labels,
+                        datasets: [{
+                            label: cfg.y,
+                            data: backendData.values,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            } else if (type === 'treemap' || type === 'sunburst') {
+                chartConfig = {
+                    type: type,
+                    data: {
+                        labels: backendData.points.map(p => backendData.hierarchy.map(h => p[h]).join(' > ')),
+                        datasets: [{
+                            label: cfg.y,
+                            tree: backendData.points,
+                            key: backendData.hierarchy,
+                            groups: backendData.hierarchy,
+                            values: backendData.value,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            } else {
+                // fallback
+                chartConfig = {
+                    type: 'bar',
+                    data: { labels: [], datasets: [] },
+                    options: { responsive: true, maintainAspectRatio: false }
+                };
+            }
+            try {
+                const chart = new Chart(ctx, chartConfig);
+                charts.push({ id: canvasId, chart });
+            } catch (e) {
+                canvas.parentElement.innerHTML += `<div style='color:red;'>Chart rendering error: ${e.message}</div>`;
+            }
+        }
+
+        function setLoading(isLoading) {
+            let loadingDiv = document.getElementById('loadingDiv');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loadingDiv';
+                loadingDiv.className = 'loading';
+                loadingDiv.style.position = 'fixed';
+                loadingDiv.style.top = '0';
+                loadingDiv.style.left = '0';
+                loadingDiv.style.width = '100vw';
+                loadingDiv.style.height = '100vh';
+                loadingDiv.style.background = 'rgba(255,255,255,0.7)';
+                loadingDiv.style.zIndex = '9999';
+                loadingDiv.innerHTML = '<div style="margin-top:20vh;font-size:22px;">Loading...</div>';
+                document.body.appendChild(loadingDiv);
+            }
+            loadingDiv.style.display = isLoading ? 'block' : 'none';
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(20);
+            doc.text('Data Visualization Report', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Generated from: ${document.getElementById('fileLabel').textContent}`, 20, 35);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 45);
+
+            let yPosition = 60;
+
+            charts.forEach((chartInfo, index) => {
+                if (yPosition > 250) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+
+                const canvas = document.getElementById(chartInfo.id);
+                const imgData = canvas.toDataURL('image/png');
+                
+                doc.setFontSize(14);
+                doc.text(canvas.parentElement.previousElementSibling.textContent, 20, yPosition);
+                
+                doc.addImage(imgData, 'PNG', 20, yPosition + 10, 170, 100);
+                
+                yPosition += 120;
+            });
+
+            doc.save('graph-report.pdf');
+        }
+    </script>
+</body>
+</html>
